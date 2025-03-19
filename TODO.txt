@@ -1,0 +1,11 @@
+#TODO: main.py is the main entry point for bookings app A. K. A. geTune.
+#TODO: handle library imports
+
+#TODO: Please use python's Textual library to create a Beautiful TUI that is pleasing to the eyes.
+#TODO: We will need the following:
+#TODO: A menu bar with the following menus; file, manage Artists; manage Bookings.
+#TODO: file menu must have the following; Login\Logout (email and password widget), Exit(simple yes(red) or no(blue) buttons on a widget)
+#TODO: manage Artists menu must have the following: View(screen), Add\Edit(screen), Print(widget), Remove(widget with drop list)
+#TODO: manage Bookings menu must have the following: View(screen), Add\Edit(screen), Print(widget), Export\Import(screen), Remove (Widget with drop list)
+#TODO: App name is 'geTune' and is connectted to a SQL database.
+#TODO: each menu must have relevant screens and or widgets
