@@ -3,12 +3,24 @@
 
 
 import sys
+import os
+import logging
 from textual.app import App, ComposeResult
 from textual.widgets import Static, Button, Header, Footer, Input, Label
 from src.widgets.option_list import OptionList, Option
 from textual.screen import Screen
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
+from src.backup_manager import BackupManager
+from src.database_exit import safe_exit
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filename='app.log'
+)
+logger = logging.getLogger('main')
 
 
 # Placeholder screens for File menu actions
@@ -33,12 +45,52 @@ class LoginScreen(Screen):
             self.app.pop_screen()
 
 
+class BackupConfirmationScreen(Screen):
+    """Screen to confirm backup creation or restoration."""
+    def __init__(self, action="create", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.action = action  # "create" or "restore"
+    
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        if self.action == "create":
+            yield Static("Create a new backup?", classes="screen-title")
+            message = "This will create a new backup of your current database."
+        else:
+            yield Static("Restore from backup?", classes="screen-title")
+            message = "This will replace your current database with the most recent backup."
+        yield Static(message)
+        yield Horizontal(
+            Button("Yes", id="confirm-yes", variant="success"),
+            Button("No", id="confirm-no", variant="error"),
+            classes="confirmation-buttons"
+        )
+        yield Footer()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        from src.backup_manager import BackupManager
+        backup_manager = BackupManager()
+        if event.button.id == "confirm-yes":
+            if self.action == "create":
+                backup_path = backup_manager.create_backup()
+                if backup_path:
+                    self.app.notify("Backup created successfully", severity="information")
+                else:
+                    self.app.notify("Failed to create backup", severity="error")
+            else:
+                if backup_manager.restore_from_backup():
+                    self.app.notify("Database restored from backup", severity="information")
+                else:
+                    self.app.notify("Failed to restore from backup", severity="error")
+            self.app.pop_screen()
+        elif event.button.id == "confirm-no":
+            self.app.pop_screen()
+
 class ExitConfirmationScreen(Screen):
-    """Screen with Yes (red) and No (blue) buttons to confirm exit."""
+    """Screen with confirmation buttons to execute exit logic."""
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Static("Are you sure you want to exit?", classes="screen-title")
-        # Using colored Buttons for Yes (red) and No (blue)
         yield Horizontal(
             Button("Yes", id="exit-yes", variant="error"),
             Button("No", id="exit-no", variant="primary"),
@@ -48,9 +100,19 @@ class ExitConfirmationScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "exit-yes":
-            self.app.exit()
+            self.perform_exit()
         elif event.button.id == "exit-no":
             self.app.pop_screen()
+    
+    def perform_exit(self):
+        """Perform safe exit with database cleanup."""
+        try:
+            self.app.query_one("#main-content").update("Preparing to exit... Saving data and encrypting.")
+            safe_exit()
+            self.app.exit()
+        except Exception as e:
+            logger.error(f"Error during exit: {str(e)}")
+            self.app.exit()
 
 
 # Placeholder screens for Manage Artists
@@ -183,6 +245,19 @@ class GeTuneApp(App):
         # A placeholder main content area
         yield Static("Welcome to geTune", id="main-content", expand=True)
         yield Footer()
+        
+    def on_mount(self) -> None:
+        """On app mount, check backup integrity and notify user."""
+        backup_manager = BackupManager()
+        status = backup_manager.check_backup_integrity()
+        message, level = backup_manager.get_user_notification()
+        severity_map = {"info": "information", "warning": "warning", "error": "error"}
+        self.notify(message, severity=severity_map.get(level, "information"))
+        # Inform user to backup if none exists or if backup is invalid
+        if not status.get("exists") or not status.get("is_valid"):
+            self.notify("No valid backup found. It is recommended to backup data before adding new appointments.", severity="warning", timeout=10, title="Backup Recommended")
+        elif status.get("age_days") and status["age_days"] > 7:
+            self.notify("Your backup is more than a week old. You might consider taking a backup.", severity="warning", timeout=10, title="Backup Outdated")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
@@ -194,15 +269,13 @@ class GeTuneApp(App):
             self.show_bookings_menu()
 
     def show_file_menu(self):
-        # A simple implementation of file menu items
         menu = OptionList(id="file-menu")
-        # Mount the OptionList first, then add options
         self.mount(menu, before="#main-content")
         menu.add_option(Option("Login/Logout", id="login"))
+        menu.add_option(Option("Backup", id="backup"))
+        menu.add_option(Option("Restore", id="restore"))
         menu.add_option(Option("Exit", id="exit"))
         menu.focus()
-
-        # Handle selection
         menu.capture_option_selected(self.handle_file_menu_selection)
 
     def handle_file_menu_selection(self, option: Option) -> None:
@@ -210,6 +283,10 @@ class GeTuneApp(App):
         self.query_one("#file-menu").remove()  # Remove menu after selection
         if selected == "login":
             self.push_screen(LoginScreen())
+        elif selected == "backup":
+            self.push_screen(BackupConfirmationScreen(action="create"))
+        elif selected == "restore":
+            self.push_screen(BackupConfirmationScreen(action="restore"))
         elif selected == "exit":
             self.push_screen(ExitConfirmationScreen())
 
