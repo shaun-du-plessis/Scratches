@@ -1,0 +1,27 @@
+/* Set grey background for the main content area */
+#main-content {
+    background: grey;
+}
+
+/* Define the menu bar style with navy blue background */
+#menu-bar {
+    background: navy;
+}
+
+/* Style buttons within the menu bar */
+/* Default button style: navy background with black text */
+#menu-bar Button {
+    background: navy;
+    color: black;
+    border: none;
+    padding: 8 16;
+}
+
+/* Change button background to baby blue when hovered or focused */
+#menu-bar Button:hover,
+#menu-bar Button:focus {
+    background: lightblue;
+    color: black;
+}
+
+/* You can add additional styles as required */

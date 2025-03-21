@@ -1,2 +1,6 @@
 textual>=0.10.0
 SQLAlchemy>=1.4
+sqlalchemy-utils>=0.38.0
+rich>=13.0.0
+textual-dev>=0.5.0
+pygments>=2.13.0

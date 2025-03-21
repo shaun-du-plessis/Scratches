@@ -4,7 +4,8 @@
 
 import sys
 from textual.app import App, ComposeResult
-from textual.widgets import Static, Button, Header, Footer, Input, Label, OptionList, Option
+from textual.widgets import Static, Button, Header, Footer, Input, Label
+from src.widgets.option_list import OptionList, Option
 from textual.screen import Screen
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
@@ -93,10 +94,11 @@ class ArtistsRemoveWidget(Static):
     def compose(self) -> ComposeResult:
         yield Static("Artists Remove Widget", classes="widget-title")
         option_list = OptionList()
+        # Mount the widget first before adding options
+        yield option_list
         # Populate with dummy items
         for artist in ["Artist A", "Artist B", "Artist C"]:
             option_list.add_option(Option(artist))
-        yield option_list
 
 
 # Placeholder screens for Manage Bookings
@@ -154,10 +156,11 @@ class BookingsRemoveWidget(Static):
     def compose(self) -> ComposeResult:
         yield Static("Bookings Remove Widget", classes="widget-title")
         option_list = OptionList()
+        # Mount the widget first before adding options
+        yield option_list
         # Populate with dummy items
         for booking in ["Booking 1", "Booking 2", "Booking 3"]:
             option_list.add_option(Option(booking))
-        yield option_list
 
 
 # Main Application
@@ -193,9 +196,10 @@ class GeTuneApp(App):
     def show_file_menu(self):
         # A simple implementation of file menu items
         menu = OptionList(id="file-menu")
+        # Mount the OptionList first, then add options
+        self.mount(menu, before="#main-content")
         menu.add_option(Option("Login/Logout", id="login"))
         menu.add_option(Option("Exit", id="exit"))
-        self.mount(menu, before="#main-content")
         menu.focus()
 
         # Handle selection
@@ -212,11 +216,12 @@ class GeTuneApp(App):
     def show_artists_menu(self):
         # Artists menu can show options in a vertical list (for screens)
         menu = OptionList(id="artists-menu")
+        # Mount the OptionList first, then add options
+        self.mount(menu, before="#main-content")
         menu.add_option(Option("View", id="artists-view"))
         menu.add_option(Option("Add/Edit", id="artists-addedit"))
         menu.add_option(Option("Print Widget", id="artists-print"))
         menu.add_option(Option("Remove Widget", id="artists-remove"))
-        self.mount(menu, before="#main-content")
         menu.focus()
         menu.capture_option_selected(self.handle_artists_menu_selection)
 
@@ -235,12 +240,13 @@ class GeTuneApp(App):
 
     def show_bookings_menu(self):
         menu = OptionList(id="bookings-menu")
+        # Mount the OptionList first, then add options
+        self.mount(menu, before="#main-content")
         menu.add_option(Option("View", id="bookings-view"))
         menu.add_option(Option("Add/Edit", id="bookings-addedit"))
         menu.add_option(Option("Print Widget", id="bookings-print"))
         menu.add_option(Option("Export/Import", id="bookings-exportimport"))
         menu.add_option(Option("Remove Widget", id="bookings-remove"))
-        self.mount(menu, before="#main-content")
         menu.focus()
         menu.capture_option_selected(self.handle_bookings_menu_selection)
 
